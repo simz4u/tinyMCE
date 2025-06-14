@@ -1,0 +1,28 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Checkout') {
+            steps {
+                git branch: 'main', url: 'http://gitlab:8888/root/tinymce.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                script {
+                    sh 'docker build -t y-websocket-server .'
+                }
+            }
+        }
+
+        stage('Run Container') {
+            steps {
+                script {
+                    sh 'docker rm -f y-websocket || true'
+                    sh 'docker run -d --name y-websocket -p 1234:1234 --restart unless-stopped y-websocket-server'
+                }
+            }
+        }
+    }
+}

@@ -1,0 +1,7 @@
+1. Jenkins에서 git clone
+
+2. Jenkins에서 docker build 명령어 실행
+  - docker build -t y-websocket-server .
+    ㄴ 이때 Dockerfile 참조함
+
+3. Jenkins에서 docker 실행
