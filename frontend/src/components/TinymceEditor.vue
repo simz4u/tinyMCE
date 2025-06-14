@@ -5,7 +5,7 @@ import { WebsocketProvider } from 'y-websocket'
 import Editor from '@tinymce/tinymce-vue'
 
 const doc = new Y.Doc()
-const wsProvider = new WebsocketProvider('ws://localhost:1234', 'my-roomname', doc)
+const wsProvider = new WebsocketProvider('ws://localhost:1234', 'unique-room-id', doc)
 const yText = doc.getText('shared-text')
 
 const apiKey = "1q1dkuycsrajbx9wkzym5sazs7fmx2exutv7bm2378ny04wh"
