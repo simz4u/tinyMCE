@@ -1,38 +1,67 @@
-<template>
-  <Editor
-      v-model="content"
-      :api-key="apiKey"
-      :init="editorInit"
-  />
-</template>
-
 <script setup>
-import { ref } from 'vue'
-import Editor from '@tinymce/tinymce-vue' // 반드시 default export 사용!
+import { ref, watch, onMounted, onBeforeUnmount } from 'vue'
+import * as Y from 'yjs'
+import { WebsocketProvider } from 'y-websocket'
+import Editor from '@tinymce/tinymce-vue'
+
+const doc = new Y.Doc()
+const wsProvider = new WebsocketProvider('ws://localhost:1234', 'my-roomname', doc)
+const yText = doc.getText('shared-text')
 
 const apiKey = "1q1dkuycsrajbx9wkzym5sazs7fmx2exutv7bm2378ny04wh"
-const content = ref('') // 꼭 ref로 감싸야 함
+const editorContent = ref('')
 
-// const apiKey = 'no-api-key' // 테스트용, 실제 키 아니어도 UI 뜨는지 확인용
-// const content = ref('<p>Hello TinyMCE</p>')
+let isUpdatingFromYjs = false
 
+wsProvider.on('status', event => {
+  console.log('WebSocket status:', event.status)
+})
 
-const editorInit = {
-  width: 800,
-  height: 600,
-  menubar: true,
-  plugins: 'lists link image code',
-  toolbar:
-      'undo redo | formatselect | bold italic | alignleft aligncenter alignright | bullist numlist | code',
-  branding: false,
-}
+watch(editorContent, (newVal, oldVal) => {
+  console.log('[watch] editorContent changed:', { oldVal, newVal })
+  if (isUpdatingFromYjs) {
+    console.log('[watch] update ignored due to Yjs source')
+    return
+  }
+  if (yText.toString() !== newVal) {
+    console.log('[watch] syncing content to Yjs')
+    yText.delete(0, yText.length)
+    yText.insert(0, newVal)
+  }
+})
+
+onMounted(() => {
+  console.log('[onMounted] Registering Yjs observer')
+  yText.observe(() => {
+    console.log('[Yjs observe] document changed')
+    isUpdatingFromYjs = true
+    const newContent = yText.toString()
+    if (editorContent.value !== newContent) {
+      console.log('[Yjs observe] updating editorContent from Yjs', newContent)
+      editorContent.value = newContent
+    }
+    isUpdatingFromYjs = false
+  })
+})
+
+onBeforeUnmount(() => {
+  console.log('[onBeforeUnmount] cleaning up')
+  wsProvider.destroy()
+  doc.destroy()
+})
 </script>
 
-<style>
-.preview {
-  border: 1px solid #ccc;
-  padding: 1rem;
-  margin-top: 1rem;
-  background: #f9f9f9;
-}
-</style>
+<template>
+  <Editor
+      id="tiny-editor"
+      :api-key="apiKey"
+      v-model="editorContent"
+      :init="{
+      width: 860,
+      height: 600,
+      menubar: false,
+      plugins: ['link', 'table'],
+      toolbar: 'undo redo | formatselect | bold italic | alignleft aligncenter alignright | link table'
+    }"
+  />
+</template>
